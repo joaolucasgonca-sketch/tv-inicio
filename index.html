@@ -54,10 +54,11 @@
   <div class="hint">Use as setas e aperte OK para abrir</div>
 
 <script>
+if(location.protocol==='https:'){ location.replace('http://'+location.host+location.pathname); }
 (function(){
   // appId = ID do app instalado na TV (confirmado pela API da Samsung)
   var APPS = [
-    { name:"YouTube",   sub:"sem anúncios", appId:"xvvl3S1bvH.TizenBrewStandalone", c1:"#ff2d55", c2:"#8a0f26" },
+    { name:"YouTube",   sub:"", appId:"111299001912", c1:"#ff2d55", c2:"#8a0f26" },
     { name:"Netflix",   sub:"",             appId:"11101200001",   c1:"#e50914", c2:"#5a0309" },
     { name:"Prime Video", sub:"",           appId:"3201512006785", c1:"#1fb6ff", c2:"#0b3a6b" },
     { name:"Disney+",   sub:"",             appId:"3201901017640", c1:"#1f6feb", c2:"#0b1d57" },
@@ -93,15 +94,19 @@
   function launch(appId){
     try{
       if(window.tizen && tizen.application && tizen.application.launch){
-        tizen.application.launch(appId,
-          function(){},
-          function(e){ alert('Não consegui abrir o app ('+ (e && e.message ? e.message : appId) +').'); }
-        );
+        tizen.application.launch(appId, function(){}, function(){ launchRest(appId); });
         return;
       }
     }catch(e){}
-    // fora da TV (teste no navegador): só mostra o alvo
-    alert('Abriria: ' + appId);
+    launchRest(appId);
+  }
+  // API local da TV (a mesma do controle pelo celular): abre o app pelo ID
+  function launchRest(appId){
+    try{
+      var x = new XMLHttpRequest();
+      x.open('POST', 'http://127.0.0.1:8001/api/v2/applications/' + appId, true);
+      x.send();
+    }catch(e){}
   }
 
   document.addEventListener('keydown', function(e){
@@ -117,7 +122,7 @@
 
   function pad(n){ return (n<10?'0':'')+n; }
   function tick(){
-    var d = new Date();
+    var n = new Date(); var d = new Date(n.getTime() + n.getTimezoneOffset()*60000 - 3*3600000); // horário de Brasília fixo
     document.getElementById('clock').textContent = pad(d.getHours())+':'+pad(d.getMinutes());
     var dias=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
     var mes=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
