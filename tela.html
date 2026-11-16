@@ -6,43 +6,65 @@
 <title>Início</title>
 <style>
   *{box-sizing:border-box; margin:0; padding:0;}
-  html,body{height:100%;}
+  html,body{height:100%; width:100%;}
   body{
-    background-color:#0a0a0c;
+    background-color:#07070a;
     background-image:
-      radial-gradient(ellipse at 85% 0%, #1a1140 0%, rgba(10,10,12,0) 60%),
-      radial-gradient(ellipse at 0% 100%, #06283d 0%, rgba(10,10,12,0) 55%);
-    color:#f5f5f7;
-    font-family:"SamsungOne","Helvetica Neue",Arial,sans-serif;
+      radial-gradient(ellipse at 80% 0%, #1a1038 0%, rgba(7,7,10,0) 55%),
+      radial-gradient(ellipse at 0% 100%, #052033 0%, rgba(7,7,10,0) 55%);
+    color:#f5f5f7; font-family:"SamsungOne","Helvetica Neue",Arial,sans-serif;
     overflow:hidden;
   }
-  .top{ height:200px; padding:64px 80px 0; position:relative; }
-  .hello{font-size:40px; font-weight:600; color:#f5f5f7;}
-  .hello small{display:block; font-size:20px; color:#9a9aa2; font-weight:400; margin-top:6px;}
-  .clock{position:absolute; right:80px; top:80px; font-size:34px; font-weight:500; color:#e9e9ee;}
-  .grid{ padding:0 62px; font-size:0; }
+  .top{ padding:60px 80px 0; position:relative; height:160px; }
+  .hello{font-size:38px; font-weight:600;}
+  .hello small{display:block; font-size:19px; color:#9a9aa2; font-weight:400; margin-top:4px;}
+  .clock{position:absolute; right:80px; top:66px; font-size:32px; color:#e9e9ee;}
+  .grid{ padding:0 64px; font-size:0; }
   .tile{
-    display:inline-block; vertical-align:top;
-    width:400px; height:228px; margin:18px;
-    position:relative; border-radius:28px; overflow:hidden;
-    background-color:#1b1b20;
+    display:inline-block; vertical-align:top; width:392px; height:210px; margin:16px;
+    position:relative; border-radius:26px; overflow:hidden; background-color:#17171c;
     -webkit-transform:scale(1); transform:scale(1);
-    -webkit-transition:-webkit-transform .18s ease; transition:transform .18s ease;
-    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    -webkit-transition:-webkit-transform .16s ease; transition:transform .16s ease;
+    box-shadow:0 8px 26px rgba(0,0,0,.45);
   }
-  .tile .bg{position:absolute; top:0; left:0; right:0; bottom:0;}
+  .tile .logo{
+    position:absolute; top:50%; left:50%;
+    -webkit-transform:translate(-50%,-62%); transform:translate(-50%,-62%);
+    width:112px; height:112px; background-size:contain; background-repeat:no-repeat; background-position:center;
+  }
   .tile .label{
-    position:absolute; left:0; bottom:0; padding:26px 28px;
-    font-size:30px; font-weight:700; color:#fff;
-    text-shadow:0 2px 10px rgba(0,0,0,.5);
+    position:absolute; left:0; right:0; bottom:24px; text-align:center;
+    font-size:23px; font-weight:600; color:#fff;
   }
-  .tile .sub{display:block; font-size:17px; font-weight:500; opacity:.85; margin-top:4px;}
+  .tile .sub{ font-size:15px; font-weight:400; color:#c7c7cf; }
   .tile.focused{
     -webkit-transform:scale(1.08); transform:scale(1.08);
-    box-shadow:0 18px 50px rgba(0,0,0,.6), 0 0 0 5px #ffffff;
-    z-index:3;
+    box-shadow:0 16px 46px rgba(0,0,0,.6), 0 0 0 5px #ffffff; z-index:3;
   }
-  .hint{ position:fixed; bottom:28px; left:0; right:0; text-align:center; color:#9a9aa2; font-size:18px; }
+  .hint{ position:fixed; bottom:26px; left:0; right:0; text-align:center; color:#8a8a93; font-size:17px; }
+
+  /* Descanso de tela */
+  #saver{
+    position:fixed; top:0; left:0; right:0; bottom:0; background:#000;
+    opacity:0; visibility:hidden;
+    -webkit-transition:opacity 1.2s ease; transition:opacity 1.2s ease; z-index:50;
+  }
+  #saver.on{ opacity:1; visibility:visible; }
+  #saver .img{
+    position:absolute; top:0; left:0; right:0; bottom:0;
+    background-size:cover; background-position:center; opacity:0;
+    -webkit-transition:opacity 1.6s ease; transition:opacity 1.6s ease;
+  }
+  #saver .img.show{ opacity:1; }
+  #saver .cap{
+    position:absolute; left:70px; bottom:60px; z-index:2;
+    font-size:30px; font-weight:600; color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.8);
+  }
+  #saver .cap small{ display:block; font-size:19px; font-weight:400; color:#d8d8de; margin-top:4px; }
+  #saver .sclock{
+    position:absolute; right:70px; bottom:60px; z-index:2; font-size:30px; color:#fff;
+    text-shadow:0 2px 14px rgba(0,0,0,.8);
+  }
 </style>
 </head>
 <body>
@@ -51,85 +73,131 @@
     <div class="clock" id="clock">--:--</div>
   </div>
   <div class="grid" id="grid"></div>
-  <div class="hint">Use as setas e aperte OK para abrir</div>
+  <div class="hint">Setas para mover · OK para abrir</div>
+
+  <div id="saver">
+    <div class="img" id="imgA"></div>
+    <div class="img" id="imgB"></div>
+    <div class="cap" id="cap"></div>
+    <div class="sclock" id="sclock"></div>
+  </div>
 
 <script>
 (function(){
-  // appId = ID do app instalado na TV (confirmado pela API da Samsung)
   var APPS = [
-    { name:"YouTube",   sub:"", appId:"111299001912", c1:"#ff2d55", c2:"#8a0f26" },
-    { name:"Netflix",   sub:"",             appId:"11101200001",   c1:"#e50914", c2:"#5a0309" },
-    { name:"Prime Video", sub:"",           appId:"3201512006785", c1:"#1fb6ff", c2:"#0b3a6b" },
-    { name:"Disney+",   sub:"",             appId:"3201901017640", c1:"#1f6feb", c2:"#0b1d57" },
-    { name:"Globoplay", sub:"",             appId:"3201510005787", c1:"#ff4d4d", c2:"#7a1230" },
-    { name:"HBO Max",   sub:"",             appId:"3201810017024", c1:"#7b2ff7", c2:"#2a0b57" },
-    { name:"Apple TV",  sub:"",             appId:"3202106024097", c1:"#3a3a3c", c2:"#0b0b0c" },
-    { name:"Spotify",   sub:"música",       appId:"3201606009684", c1:"#1ed760", c2:"#0b4d26" }
+    { name:"YouTube",   sub:"", id:"111299001912",   icon:"icons/youtube.png" },
+    { name:"Netflix",   sub:"", id:"11101200001",    icon:"icons/netflix.png" },
+    { name:"Prime Video", sub:"", id:"3201512006785", icon:"icons/prime.png" },
+    { name:"Disney+",   sub:"", id:"3201901017640",  icon:"icons/disney.png" },
+    { name:"Globoplay", sub:"", id:"3201510005787",  icon:"icons/globoplay.png" },
+    { name:"HBO Max",   sub:"", id:"3201810017024",  icon:"icons/hbo.png" },
+    { name:"Apple TV",  sub:"", id:"3202106024097",  icon:"icons/appletv.png" },
+    { name:"Spotify",   sub:"", id:"3201606009684",  icon:"icons/spotify.png" }
   ];
-
   var COLS = 4;
   var grid = document.getElementById('grid');
-  var tiles = [];
-  var cur = 0;
+  var tiles = [], cur = 0;
 
-  APPS.forEach(function(a, i){
-    var t = document.createElement('div');
-    t.className = 'tile';
-    t.innerHTML =
-      '<div class="bg" style="background:linear-gradient(135deg,'+a.c1+' 0%,'+a.c2+' 100%)"></div>' +
-      '<div class="label">'+a.name+(a.sub?'<span class="sub">'+a.sub+'</span>':'')+'</div>';
-    t.addEventListener('click', function(){ launch(a.appId); });
-    grid.appendChild(t);
-    tiles.push(t);
-  });
+  for (var i=0;i<APPS.length;i++){
+    (function(a){
+      var t = document.createElement('div');
+      t.className = 'tile';
+      t.innerHTML =
+        '<div class="logo" style="background-image:url('+a.icon+')"></div>' +
+        '<div class="label">'+a.name+(a.sub?'<span class="sub"> · '+a.sub+'</span>':'')+'</div>';
+      t.onclick = function(){ launch(a.id); };
+      grid.appendChild(t);
+      tiles.push(t);
+    })(APPS[i]);
+  }
 
   function focus(i){
     if(i<0||i>=tiles.length) return;
-    tiles[cur].classList.remove('focused');
-    cur = i;
-    tiles[cur].classList.add('focused');
+    tiles[cur].className='tile'; cur=i; tiles[cur].className='tile focused';
   }
 
-  function launch(appId){
+  function launch(id){
     try{
       if(window.tizen && tizen.application && tizen.application.launch){
-        tizen.application.launch(appId, function(){}, function(){ launchRest(appId); });
+        tizen.application.launch(id, function(){}, function(){ launchRest(id); });
         return;
       }
     }catch(e){}
-    launchRest(appId);
+    launchRest(id);
   }
-  // API local da TV (a mesma do controle pelo celular): abre o app pelo ID
-  function launchRest(appId){
-    try{
-      var x = new XMLHttpRequest();
-      x.open('POST', 'http://127.0.0.1:8001/api/v2/applications/' + appId, true);
-      x.send();
-    }catch(e){}
+  function launchRest(id){
+    try{ var x=new XMLHttpRequest(); x.open('POST','http://127.0.0.1:8001/api/v2/applications/'+id,true); x.send(); }catch(e){}
+  }
+
+  // ---------- Relógio (horário de Brasília) ----------
+  function pad(n){ return (n<10?'0':'')+n; }
+  function nowBR(){ var n=new Date(); return new Date(n.getTime()+n.getTimezoneOffset()*60000-3*3600000); }
+  function tick(){
+    var d=nowBR(), hhmm=pad(d.getHours())+':'+pad(d.getMinutes());
+    document.getElementById('clock').textContent=hhmm;
+    document.getElementById('sclock').textContent=hhmm;
+    var dias=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+    var mes=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    document.getElementById('date').textContent=dias[d.getDay()]+', '+d.getDate()+' '+mes[d.getMonth()];
+  }
+  tick(); setInterval(tick, 20000);
+
+  // ---------- Descanso de tela ----------
+  var WM='https://commons.wikimedia.org/wiki/Special:FilePath/';
+  var ART=[
+    {f:'Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg', t:'A Noite Estrelada', s:'Vincent van Gogh, 1889'},
+    {f:'Tsunami_by_hokusai_19th_century.jpg', t:'A Grande Onda de Kanagawa', s:'Katsushika Hokusai, c.1831'},
+    {f:'Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg', t:'Caminhante sobre o Mar de Névoa', s:'Caspar David Friedrich, 1818'},
+    {f:'Claude_Monet,_Impression,_soleil_levant.jpg', t:'Impressão, Nascer do Sol', s:'Claude Monet, 1872'},
+    {f:'Red_Fuji_southern_wind_clear_morning.jpg', t:'Fuji Vermelho', s:'Katsushika Hokusai, c.1831'},
+    {f:'The_Fighting_Temeraire,_JMW_Turner,_National_Gallery.jpg', t:'O Temerário', s:'J. M. W. Turner, 1838'},
+    {f:'The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg', t:'O Beijo', s:'Gustav Klimt, 1908'},
+    {f:'NASA-Apollo8-Dec24-Earthrise.jpg', t:'Nascer da Terra', s:'Apollo 8 · NASA, 1968'},
+    {f:'Pillars_of_creation_2014_HST_WFC3-UVIS_full-res_denoised.jpg', t:'Pilares da Criação', s:'Telescópio Hubble · NASA'},
+    {f:'1665_Girl_with_a_Pearl_Earring.jpg', t:'Moça com Brinco de Pérola', s:'Johannes Vermeer, c.1665'}
+  ];
+  var sv=document.getElementById('saver'), imgA=document.getElementById('imgA'), imgB=document.getElementById('imgB'), cap=document.getElementById('cap');
+  var slot=imgA, other=imgB, sidx=-1, sTimer=null, idleTimer=null, saving=false;
+  function url(f){ return WM+encodeURIComponent(f)+'?width=1920'; }
+  function preload(f){ var im=new Image(); im.src=url(f); }
+  function showNext(){
+    sidx=(sidx+1)%ART.length;
+    var a=ART[sidx];
+    other.style.backgroundImage='url('+url(a.f)+')';
+    other.className='img show'; slot.className='img';
+    var tmp=slot; slot=other; other=tmp;
+    cap.innerHTML=a.t+'<small>'+a.s+'</small>';
+    preload(ART[(sidx+1)%ART.length].f);
+  }
+  function startSaver(){
+    if(saving) return; saving=true; sidx=-1;
+    showNext(); sv.className='on';
+    sTimer=setInterval(showNext, 12000);
+  }
+  function stopSaver(){
+    if(!saving) return; saving=false;
+    sv.className=''; clearInterval(sTimer);
+    imgA.className='img'; imgB.className='img';
+  }
+  function resetIdle(){
+    stopSaver();
+    if(idleTimer) clearTimeout(idleTimer);
+    idleTimer=setTimeout(startSaver, 60000); // 60s parado
   }
 
   document.addEventListener('keydown', function(e){
-    var k = e.keyCode;
-    if(k===37){ if(cur%COLS!==0) focus(cur-1); }        // esquerda
-    else if(k===39){ if(cur%COLS!==COLS-1) focus(cur+1); } // direita
-    else if(k===38){ if(cur-COLS>=0) focus(cur-COLS); }    // cima
-    else if(k===40){ if(cur+COLS<tiles.length) focus(cur+COLS); } // baixo
-    else if(k===13){ launch(APPS[cur].appId); }            // OK
-    else return;
-    e.preventDefault();
+    var k=e.keyCode;
+    if(saving){ stopSaver(); resetIdle(); e.preventDefault(); return; }
+    if(k===37){ if(cur%COLS!==0) focus(cur-1); }
+    else if(k===39){ if(cur%COLS!==COLS-1) focus(cur+1); }
+    else if(k===38){ if(cur-COLS>=0) focus(cur-COLS); }
+    else if(k===40){ if(cur+COLS<tiles.length) focus(cur+COLS); }
+    else if(k===13){ launch(APPS[cur].id); }
+    else { resetIdle(); return; }
+    resetIdle(); e.preventDefault();
   });
 
-  function pad(n){ return (n<10?'0':'')+n; }
-  function tick(){
-    var n = new Date(); var d = new Date(n.getTime() + n.getTimezoneOffset()*60000 - 3*3600000); // horário de Brasília fixo
-    document.getElementById('clock').textContent = pad(d.getHours())+':'+pad(d.getMinutes());
-    var dias=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
-    var mes=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-    document.getElementById('date').textContent = dias[d.getDay()]+', '+d.getDate()+' '+mes[d.getMonth()];
-  }
-  tick(); setInterval(tick, 10000);
-
-  focus(0);
+  focus(0); resetIdle();
 })();
 </script>
 </body>
