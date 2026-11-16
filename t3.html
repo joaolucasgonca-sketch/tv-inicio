@@ -19,7 +19,7 @@
   .hello{font-size:38px; font-weight:600;}
   .hello small{display:block; font-size:19px; color:#9a9aa2; font-weight:400; margin-top:4px;}
   .clock{position:absolute; right:80px; top:66px; font-size:32px; color:#e9e9ee;}
-  .grid{ padding:0 64px; font-size:0; }
+  .grid{ width:1272px; margin:0 auto; font-size:0; }
   .tile{
     display:inline-block; vertical-align:top; width:392px; height:210px; margin:16px;
     position:relative; border-radius:26px; overflow:hidden; background-color:#17171c;
@@ -90,11 +90,9 @@
     { name:"Prime Video", sub:"", id:"3201512006785", icon:"icons/prime.png" },
     { name:"Disney+",   sub:"", id:"3201901017640",  icon:"icons/disney.png" },
     { name:"Globoplay", sub:"", id:"3201510005787",  icon:"icons/globoplay.png" },
-    { name:"HBO Max",   sub:"", id:"3201810017024",  icon:"icons/hbo.png" },
-    { name:"Apple TV",  sub:"", id:"3202106024097",  icon:"icons/appletv.png" },
-    { name:"Spotify",   sub:"", id:"3201606009684",  icon:"icons/spotify.png" }
+    { name:"Apple TV",  sub:"", id:"3202106024097",  icon:"icons/appletv.png" }
   ];
-  var COLS = 4;
+  var COLS = 3;
   var grid = document.getElementById('grid');
   var tiles = [], cur = 0;
 
