@@ -1,0 +1,10 @@
+{
+  "name": "tv-inicio",
+  "version": "1.0.0",
+  "appName": "Início",
+  "description": "Tela inicial estilo Apple TV — abre os apps direto.",
+  "packageType": "mods",
+  "websiteURL": "https://joaolucasgonca-sketch.github.io/tv-inicio/",
+  "main": "mod.js",
+  "keys": []
+}
