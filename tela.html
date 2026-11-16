@@ -73,7 +73,7 @@
     <div class="clock" id="clock">--:--</div>
   </div>
   <div class="grid" id="grid"></div>
-  <div class="hint">Setas para mover · OK para abrir</div>
+  <div class="hint" id="hint">Setas para mover · OK para abrir &nbsp;·&nbsp; v3</div>
 
   <div id="saver">
     <div class="img" id="imgA"></div>
@@ -116,17 +116,29 @@
     tiles[cur].className='tile'; cur=i; tiles[cur].className='tile focused';
   }
 
+  var hint=document.getElementById('hint');
+  function say(t){ if(hint) hint.textContent=t; }
   function launch(id){
+    var name='';
+    for(var i=0;i<APPS.length;i++){ if(APPS[i].id===id) name=APPS[i].name; }
     try{
       if(window.tizen && tizen.application && tizen.application.launch){
-        tizen.application.launch(id, function(){}, function(){ launchRest(id); });
+        say('Abrindo '+name+'… (tizen)');
+        tizen.application.launch(id, function(){}, function(){ launchRest(id,name); });
         return;
       }
     }catch(e){}
-    launchRest(id);
+    launchRest(id,name);
   }
-  function launchRest(id){
-    try{ var x=new XMLHttpRequest(); x.open('POST','http://127.0.0.1:8001/api/v2/applications/'+id,true); x.send(); }catch(e){}
+  function launchRest(id,name){
+    say('Abrindo '+name+'…');
+    try{
+      var x=new XMLHttpRequest();
+      x.open('POST','http://127.0.0.1:8001/api/v2/applications/'+id,true);
+      x.onreadystatechange=function(){ if(x.readyState===4){ say(name+': resposta '+x.status+' '+(x.responseText||'')); } };
+      x.onerror=function(){ say(name+': ERRO de rede ao abrir'); };
+      x.send();
+    }catch(e){ say(name+': ERRO '+e); }
   }
 
   // ---------- Relógio (horário de Brasília) ----------
