@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, initial-scale=1">
+<title>Início</title>
+<style>
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; width:100%;}
+  body{
+    background-color:#07070a;
+    background-image:
+      radial-gradient(ellipse at 80% 0%, #1a1038 0%, rgba(7,7,10,0) 55%),
+      radial-gradient(ellipse at 0% 100%, #052033 0%, rgba(7,7,10,0) 55%);
+    color:#f5f5f7; font-family:"SamsungOne","Helvetica Neue",Arial,sans-serif;
+    overflow:hidden;
+  }
+  .top{ padding:60px 80px 0; position:relative; height:200px; }
+  .hello{font-size:38px; font-weight:600;}
+  .hello small{display:block; font-size:19px; color:#9a9aa2; font-weight:400; margin-top:4px;}
+  .clock{position:absolute; right:80px; top:66px; font-size:32px; color:#e9e9ee; text-align:right;}
+  .clock small{display:block; font-size:18px; color:#9a9aa2; margin-top:4px;}
+  .grid{ width:1272px; margin:0 auto; font-size:0; }
+  .tile{
+    display:inline-block; vertical-align:top; width:392px; height:210px; margin:16px;
+    position:relative; border-radius:26px; overflow:hidden; background-color:#17171c;
+    -webkit-transform:scale(1); transform:scale(1);
+    -webkit-transition:-webkit-transform .16s ease; transition:transform .16s ease;
+    box-shadow:0 8px 26px rgba(0,0,0,.45);
+  }
+  .tile .logo{
+    position:absolute; top:50%; left:50%;
+    -webkit-transform:translate(-50%,-62%); transform:translate(-50%,-62%);
+    width:112px; height:112px; background-size:contain; background-repeat:no-repeat; background-position:center;
+  }
+  .tile .label{
+    position:absolute; left:0; right:0; bottom:24px; text-align:center;
+    font-size:23px; font-weight:600; color:#fff;
+  }
+  .tile.focused{
+    -webkit-transform:scale(1.08); transform:scale(1.08);
+    box-shadow:0 16px 46px rgba(0,0,0,.6), 0 0 0 5px #ffffff; z-index:3;
+  }
+  .hint{ position:fixed; bottom:26px; left:0; right:0; text-align:center; color:#8a8a93; font-size:17px; }
+
+  /* Descanso de tela */
+  #saver{
+    position:fixed; top:0; left:0; right:0; bottom:0; background:#000; overflow:hidden;
+    opacity:0; visibility:hidden;
+    -webkit-transition:opacity 1.2s ease; transition:opacity 1.2s ease; z-index:50;
+  }
+  #saver.on{ opacity:1; visibility:visible; }
+  #saver .img{
+    position:absolute; top:0; left:0; right:0; bottom:0;
+    background-size:cover; background-position:center; opacity:0;
+    -webkit-transition:opacity 2s ease; transition:opacity 2s ease;
+  }
+  #saver .img.show{
+    opacity:1;
+    -webkit-animation:kb 24s linear forwards; animation:kb 24s linear forwards;
+  }
+  @-webkit-keyframes kb{ from{-webkit-transform:scale(1);} to{-webkit-transform:scale(1.09);} }
+  @keyframes kb{ from{transform:scale(1);} to{transform:scale(1.09);} }
+  #saver .shade{
+    position:absolute; left:0; right:0; bottom:0; height:340px; z-index:2;
+    background:linear-gradient(to top, rgba(0,0,0,.65), rgba(0,0,0,0));
+  }
+  #saver .night{
+    position:absolute; top:0; left:0; right:0; bottom:0; z-index:3; background:#000; opacity:0;
+    -webkit-transition:opacity 2s ease; transition:opacity 2s ease;
+  }
+  #saver.dim .night{ opacity:.55; }
+  #saver .when{
+    position:absolute; left:80px; bottom:70px; z-index:4; color:#fff;
+    text-shadow:0 2px 16px rgba(0,0,0,.8);
+  }
+  #saver .when .t{ font-size:96px; font-weight:300; line-height:1; }
+  #saver .when .d{ font-size:26px; margin-top:10px; color:#e6e6ea; }
+  #saver .cap{
+    position:absolute; right:80px; bottom:76px; z-index:4; text-align:right; max-width:760px;
+    font-size:24px; font-weight:600; color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.8);
+  }
+  #saver .cap small{ display:block; font-size:18px; font-weight:400; color:#d8d8de; margin-top:4px; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="hello" id="hello">Olá<small id="date"></small></div>
+    <div class="clock"><span id="clock">--:--</span><small id="wx"></small></div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="hint" id="hint">Setas para mover · OK para abrir</div>
+
+  <div id="saver">
+    <div class="img" id="imgA"></div>
+    <div class="img" id="imgB"></div>
+    <div class="shade"></div>
+    <div class="night"></div>
+    <div class="when"><div class="t" id="sclock"></div><div class="d" id="sdate"></div></div>
+    <div class="cap" id="cap"></div>
+  </div>
+
+<script>
+(function(){
+  // ---------- Configuração ----------
+  // Cidade para o clima (latitude, longitude). null = não mostra clima.
+  var CITY = null; // ex.: { name:"São Paulo", lat:-23.55, lon:-46.63 }
+  var IDLE_MS = 2*60*1000;   // entra no descanso após 2 min parado
+  var SLIDE_MS = 20000;      // troca de imagem a cada 20 s
+  if(/teste/.test(location.search)){ IDLE_MS=4000; SLIDE_MS=6000; }  // modo de teste rápido
+
+  // app = código interno do app na TV (Tizen); store = código da loja (plano B)
+  var APPS = [
+    { name:"YouTube",     app:"9Ur5IzDKqV.TizenYouTube",            store:"111299001912",  icon:"icons/youtube.png" },
+    { name:"Netflix",     app:"RN1MCdNq8t.Netflix",                 store:"11101200001",   icon:"icons/netflix.png" },
+    { name:"Prime Video", app:"evKhCgZelL.AmazonIgnitionLauncher2", store:"3201512006785", icon:"icons/prime.png" },
+    { name:"Disney+",     app:"MCmYXNxgcu.DisneyPlus",              store:"3201901017640", icon:"icons/disney.png" },
+    { name:"Globoplay",   app:"EUJSYi9GRg.globo",                   store:"3201510005787", icon:"icons/globoplay.png" },
+    { name:"Apple TV",    app:"Y6A54cEa22.AppleTV",                 store:"3202106024097", icon:"icons/appletv.png" }
+  ];
+  var COLS = 3;
+  var grid = document.getElementById('grid');
+  var tiles = [], cur = 0;
+
+  for (var i=0;i<APPS.length;i++){
+    (function(a, idx){
+      var t = document.createElement('div');
+      t.className = 'tile';
+      t.innerHTML =
+        '<div class="logo" style="background-image:url('+a.icon+')"></div>' +
+        '<div class="label">'+a.name+'</div>';
+      t.onclick = function(){ focus(idx); launch(a); };
+      grid.appendChild(t);
+      tiles.push(t);
+    })(APPS[i], i);
+  }
+
+  function focus(i){
+    if(i<0||i>=tiles.length) return;
+    tiles[cur].className='tile'; cur=i; tiles[cur].className='tile focused';
+  }
+
+  var hint=document.getElementById('hint');
+  var hintTimer=null;
+  function say(t, keep){
+    hint.textContent=t;
+    if(hintTimer) clearTimeout(hintTimer);
+    if(!keep) hintTimer=setTimeout(function(){ hint.textContent='Setas para mover · OK para abrir'; }, 6000);
+  }
+
+  // Abre o app: 1) API Tizen com o código interno; 2) API local da TV com o código interno;
+  // 3) API local com o código da loja. Mostra na tela o que aconteceu.
+  function launch(a){
+    say('Abrindo '+a.name+'…', true);
+    var done=false;
+    function ok(){ done=true; say('Abrindo '+a.name+'…'); }
+    function viaRest(id, next){
+      try{
+        var x=new XMLHttpRequest();
+        x.open('POST','http://127.0.0.1:8001/api/v2/applications/'+id,true);
+        x.timeout=4000;
+        x.onreadystatechange=function(){
+          if(x.readyState!==4) return;
+          if(x.status===200 || x.status===0){ ok(); }   // 0 = resposta bloqueada pelo navegador, mas o pedido chegou
+          else if(next){ next(); }
+          else { say(a.name+': a TV recusou ('+x.status+')'); }
+        };
+        x.ontimeout=function(){ if(next) next(); else say(a.name+': a TV não respondeu'); };
+        x.send();
+      }catch(e){ if(next) next(); else say(a.name+': erro '+e); }
+    }
+    var rest = function(){ viaRest(a.app, function(){ viaRest(a.store, null); }); };
+    try{
+      if(window.tizen && tizen.application && tizen.application.launch){
+        tizen.application.launch(a.app, ok, rest);
+        return;
+      }
+    }catch(e){}
+    rest();
+  }
+
+  // ---------- Relógio, data e clima (horário de Brasília) ----------
+  function pad(n){ return (n<10?'0':'')+n; }
+  function nowBR(){ var n=new Date(); return new Date(n.getTime()+n.getTimezoneOffset()*60000-3*3600000); }
+  var DIAS=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+  var MES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  function greet(h){ return h<5?'Boa noite':h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'; }
+  var wxText='';
+  function tick(){
+    var d=nowBR(), h=d.getHours(), hhmm=pad(h)+':'+pad(d.getMinutes());
+    var dateTxt=DIAS[d.getDay()]+', '+d.getDate()+' de '+MES[d.getMonth()];
+    document.getElementById('clock').textContent=hhmm;
+    document.getElementById('hello').firstChild.nodeValue=greet(h);
+    document.getElementById('date').textContent=dateTxt;
+    document.getElementById('sclock').textContent=hhmm;
+    document.getElementById('sdate').textContent=dateTxt+(wxText?'  ·  '+wxText:'');
+    document.getElementById('wx').textContent=wxText;
+    // modo noturno: das 23h às 6h o descanso fica mais escuro
+    var night=(h>=23||h<6);
+    sv.className = saving ? ('on'+(night?' dim':'')) : '';
+  }
+  var WX={0:'céu limpo',1:'quase limpo',2:'parcialmente nublado',3:'nublado',45:'neblina',48:'neblina',
+    51:'garoa',53:'garoa',55:'garoa',61:'chuva fraca',63:'chuva',65:'chuva forte',80:'pancadas de chuva',
+    81:'pancadas de chuva',82:'chuva forte',95:'trovoadas',96:'trovoadas',99:'trovoadas'};
+  function weather(){
+    if(!CITY) return;
+    try{
+      var x=new XMLHttpRequest();
+      x.open('GET','https://api.open-meteo.com/v1/forecast?latitude='+CITY.lat+'&longitude='+CITY.lon+
+        '&current=temperature_2m,weather_code&timezone=America%2FSao_Paulo',true);
+      x.onreadystatechange=function(){
+        if(x.readyState!==4||x.status!==200) return;
+        try{
+          var c=JSON.parse(x.responseText).current;
+          wxText=Math.round(c.temperature_2m)+'° '+(WX[c.weather_code]||'')+' · '+CITY.name;
+          tick();
+        }catch(e){}
+      };
+      x.send();
+    }catch(e){}
+  }
+
+  // ---------- Descanso de tela ----------
+  var WM='https://commons.wikimedia.org/wiki/Special:FilePath/';
+  var ART=[
+    {f:'Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg', t:'A Noite Estrelada', s:'Vincent van Gogh, 1889'},
+    {f:'Tsunami_by_hokusai_19th_century.jpg', t:'A Grande Onda de Kanagawa', s:'Katsushika Hokusai, c.1831'},
+    {f:'Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg', t:'Caminhante sobre o Mar de Névoa', s:'Caspar David Friedrich, 1818'},
+    {f:'Claude_Monet,_Impression,_soleil_levant.jpg', t:'Impressão, Nascer do Sol', s:'Claude Monet, 1872'},
+    {f:'Red_Fuji_southern_wind_clear_morning.jpg', t:'Fuji Vermelho', s:'Katsushika Hokusai, c.1831'},
+    {f:'The_Fighting_Temeraire,_JMW_Turner,_National_Gallery.jpg', t:'O Temerário', s:'J. M. W. Turner, 1838'},
+    {f:'The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg', t:'O Beijo', s:'Gustav Klimt, 1908'},
+    {f:'1665_Girl_with_a_Pearl_Earring.jpg', t:'Moça com Brinco de Pérola', s:'Johannes Vermeer, c.1665'},
+    {f:'Claude_Monet_-_Water_Lilies_-_1906,_Ryerson.jpg', t:'Ninfeias', s:'Claude Monet, 1906'},
+    {f:'Vincent van Gogh - Wheat Field with Cypresses (National Gallery version).jpg', t:'Campo de Trigo com Ciprestes', s:'Vincent van Gogh, 1889'},
+    {f:'Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg', t:'O Nascimento de Vênus', s:'Sandro Botticelli, c.1485'},
+    {f:'Albert_Bierstadt_-_Among_the_Sierra_Nevada,_California_-_Google_Art_Project.jpg', t:'Na Sierra Nevada', s:'Albert Bierstadt, 1868'},
+    {f:'Thomas Cole - The Oxbow (Met).jpg', t:'O Meandro', s:'Thomas Cole, 1836'},
+    {f:'Georges_Seurat_-_A_Sunday_on_La_Grande_Jatte_--_1884_-_Google_Art_Project.jpg', t:'Uma Tarde de Domingo na Grande Jatte', s:'Georges Seurat, 1884'},
+    {f:'Claude_Monet_-_Woman_with_a_Parasol_-_Madame_Monet_and_Her_Son_-_Google_Art_Project.jpg', t:'Mulher com Sombrinha', s:'Claude Monet, 1875'},
+    {f:'Hovhannes Aivazovsky - The Ninth Wave - Google Art Project.jpg', t:'A Nona Onda', s:'Ivan Aivazovsky, 1850'},
+    {f:'Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg', t:'A Leiteira', s:'Johannes Vermeer, c.1658'},
+    {f:'Church Heart of the Andes.jpg', t:'O Coração dos Andes', s:'Frederic Edwin Church, 1859'},
+    {f:'Vassily Kandinsky, 1913 - Composition 7.jpg', t:'Composição VII', s:'Wassily Kandinsky, 1913'},
+    {f:'Piet_Mondriaan,_1930_-_Mondrian_Composition_II_in_Red,_Blue,_and_Yellow.jpg', t:'Composição com Vermelho, Azul e Amarelo', s:'Piet Mondrian, 1930'},
+    {f:'Panorama fom Morro da Urca - Sugarloaf Mountain at Right - Rio de Janeiro - Brazil.jpg', t:'Pão de Açúcar', s:'Rio de Janeiro, Brasil'},
+    {f:'Lençóis Maranhenses 2018.jpg', t:'Lençóis Maranhenses', s:'Maranhão, Brasil'},
+    {f:'Parque Nacional Marinho de Fernando de Noronha - João Paulo Marques DAndretta 1-edited.jpg', t:'Fernando de Noronha', s:'Pernambuco, Brasil'},
+    {f:'Morrão, no Parque Nacional da Chapada Diamantina - Bahia crop 2.jpg', t:'Morrão, Chapada Diamantina', s:'Bahia, Brasil'},
+    {f:'Iguazu_Décembre_2007_-_Panorama_1.jpg', t:'Cataratas do Iguaçu', s:'Brasil e Argentina'},
+    {f:'Mount Fitz Roy at Sunset.jpg', t:'Monte Fitz Roy', s:'Patagônia, Argentina'},
+    {f:'Moraine_Lake_17092005.jpg', t:'Lago Moraine', s:'Banff, Canadá'},
+    {f:'Matterhorn_from_Domhütte_-_2.jpg', t:'Matterhorn', s:'Alpes, Suíça'},
+    {f:'Half_Dome_from_Glacier_Point,_Yosemite_NP_-_Diliff.jpg', t:'Half Dome, Yosemite', s:'Califórnia, EUA'},
+    {f:'Aurora_borealis_above_Lyngenfjorden,_2012_March.jpg', t:'Aurora Boreal', s:'Lyngenfjord, Noruega'},
+    {f:'Milky_Way_Night_Sky_Black_Rock_Desert_Nevada.jpg', t:'Via Láctea', s:'Deserto de Black Rock, EUA'},
+    {f:'NASA-Apollo8-Dec24-Earthrise.jpg', t:'Nascer da Terra', s:'Apollo 8 · NASA, 1968'},
+    {f:'Pillars_of_creation_2014_HST_WFC3-UVIS_full-res_denoised.jpg', t:'Pilares da Criação', s:'Telescópio Hubble · NASA'},
+    {f:'Hubble_ultra_deep_field.jpg', t:'Campo Ultraprofundo do Hubble', s:'NASA · ESA'}
+  ];
+  var sv=document.getElementById('saver'), imgA=document.getElementById('imgA'), imgB=document.getElementById('imgB'), cap=document.getElementById('cap');
+  var slot=imgA, other=imgB, order=[], pos=0, sTimer=null, idleTimer=null, saving=false, loading=false;
+
+  function url(f){ return WM+encodeURIComponent(f.replace(/ /g,'_'))+'?width=1920'; }
+  function shuffle(){
+    order=[]; for(var i=0;i<ART.length;i++) order.push(i);
+    for(var j=order.length-1;j>0;j--){ var k=Math.floor(Math.random()*(j+1)); var t=order[j]; order[j]=order[k]; order[k]=t; }
+    pos=0;
+  }
+  function nextIndex(){ if(pos>=order.length) shuffle(); return order[pos++]; }
+
+  // Carrega a próxima imagem antes de mostrar; se falhar, pula para outra.
+  function showNext(tries){
+    if(!saving || loading) return;
+    tries=tries||0; if(tries>5) return;
+    var a=ART[nextIndex()], u=url(a.f), im=new Image();
+    loading=true;
+    im.onload=function(){
+      loading=false; if(!saving) return;
+      other.style.backgroundImage='url("'+u+'")';
+      other.className='img'; void other.offsetWidth; other.className='img show';
+      slot.className='img';
+      var tmp=slot; slot=other; other=tmp;
+      cap.innerHTML=a.t+'<small>'+a.s+'</small>';
+    };
+    im.onerror=function(){ loading=false; showNext(tries+1); };
+    im.src=u;
+  }
+  function startSaver(){
+    if(saving) return; saving=true;
+    if(!order.length) shuffle();
+    tick(); weather();
+    showNext(0);
+    sTimer=setInterval(function(){ showNext(0); }, SLIDE_MS);
+  }
+  function stopSaver(){
+    if(!saving) return; saving=false; loading=false;
+    clearInterval(sTimer); tick();
+    imgA.className='img'; imgB.className='img';
+  }
+  function resetIdle(){
+    stopSaver();
+    if(idleTimer) clearTimeout(idleTimer);
+    idleTimer=setTimeout(startSaver, IDLE_MS);
+  }
+
+  document.addEventListener('keydown', function(e){
+    var k=e.keyCode;
+    if(saving){ resetIdle(); e.preventDefault(); return; }   // qualquer tecla só acorda a tela
+    if(k===37){ if(cur%COLS!==0) focus(cur-1); }
+    else if(k===39){ if(cur%COLS!==COLS-1 && cur+1<tiles.length) focus(cur+1); }
+    else if(k===38){ if(cur-COLS>=0) focus(cur-COLS); }
+    else if(k===40){ if(cur+COLS<tiles.length) focus(cur+COLS); }
+    else if(k===13){ launch(APPS[cur]); }
+    else { resetIdle(); return; }
+    resetIdle(); e.preventDefault();
+  });
+  // ao voltar de um app para esta tela, reinicia a contagem
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) resetIdle(); });
+
+  tick(); setInterval(tick, 20000);
+  weather(); setInterval(weather, 30*60*1000);
+  focus(0); resetIdle();
+})();
+</script>
+</body>
+</html>
