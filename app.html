@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=1920, initial-scale=1">
 <title>Início</title>
+<script src="$WEBAPIS/webapis/webapis.js"></script>
 <style>
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%; width:100%;}
@@ -323,8 +324,22 @@
     im.onerror=function(){ loading=false; showNext(tries+1); };
     im.src=u;
   }
+  // ---------- Impede a proteção de tela da Samsung (logo andando) ----------
+  // Enquanto esta tela estiver aberta, o nosso descanso é que manda.
+  function blockSamsungSaver(){
+    try{
+      if(window.webapis && webapis.appcommon && webapis.appcommon.setScreenSaver){
+        webapis.appcommon.setScreenSaver(webapis.appcommon.AppCommonScreenSaverState.SCREEN_SAVER_OFF, function(){}, function(){});
+      }
+    }catch(e){}
+    try{ if(window.tizen && tizen.power && tizen.power.request) tizen.power.request('SCREEN','SCREEN_NORMAL'); }catch(e){}
+  }
+  blockSamsungSaver();
+  setInterval(blockSamsungSaver, 5*60*1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) blockSamsungSaver(); });
+
   function startSaver(){
-    if(saving) return; saving=true;
+    if(saving) return; saving=true; blockSamsungSaver();
     if(!order.length) shuffle();
     tick(); weather();
     showNext(0);
