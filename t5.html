@@ -104,7 +104,7 @@
 (function(){
   // ---------- Configuração ----------
   // Cidade para o clima (latitude, longitude). null = não mostra clima.
-  var CITY = null; // ex.: { name:"São Paulo", lat:-23.55, lon:-46.63 }
+  var CITY = { name:"Londrina", lat:-23.31, lon:-51.16 };
   var IDLE_MS = 2*60*1000;   // entra no descanso após 2 min parado
   var SLIDE_MS = 20000;      // troca de imagem a cada 20 s
   if(/teste/.test(location.search)){ IDLE_MS=4000; SLIDE_MS=6000; }  // modo de teste rápido
