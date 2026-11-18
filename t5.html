@@ -15,33 +15,64 @@
     color:#f5f5f7; font-family:"SamsungOne","Helvetica Neue",Arial,sans-serif;
     overflow:hidden;
   }
-  .top{ padding:60px 80px 0; position:relative; height:200px; }
-  .hello{font-size:38px; font-weight:600;}
-  .hello small{display:block; font-size:19px; color:#9a9aa2; font-weight:400; margin-top:4px;}
-  .clock{position:absolute; right:80px; top:66px; font-size:32px; color:#e9e9ee; text-align:right;}
-  .clock small{display:block; font-size:18px; color:#9a9aa2; margin-top:4px;}
-  .grid{ width:1272px; margin:0 auto; font-size:0; }
-  .tile{
-    display:inline-block; vertical-align:top; width:392px; height:210px; margin:16px;
-    position:relative; border-radius:26px; overflow:hidden; background-color:#17171c;
-    -webkit-transform:scale(1); transform:scale(1);
-    -webkit-transition:-webkit-transform .16s ease; transition:transform .16s ease;
-    box-shadow:0 8px 26px rgba(0,0,0,.45);
+  /* ---- Estilo Apple TV: arte do dia no fundo + fileira de apps embaixo ---- */
+  #bg{
+    position:fixed; top:0; left:0; right:0; bottom:0; z-index:0;
+    background-color:#07070a; background-size:cover; background-position:center;
+    opacity:0; -webkit-transition:opacity 1.5s ease; transition:opacity 1.5s ease;
   }
-  .tile .logo{
-    position:absolute; top:50%; left:50%;
-    -webkit-transform:translate(-50%,-62%); transform:translate(-50%,-62%);
-    width:112px; height:112px; background-size:contain; background-repeat:no-repeat; background-position:center;
+  #bg.show{ opacity:1; }
+  #veil{
+    position:fixed; top:0; left:0; right:0; bottom:0; z-index:1;
+    background:
+      linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 22%),
+      linear-gradient(to top, rgba(0,0,0,.92) 0%, rgba(0,0,0,.55) 38%, rgba(0,0,0,0) 62%);
+  }
+  .top{ position:fixed; top:48px; left:80px; right:80px; z-index:2; height:90px; }
+  .hello{font-size:34px; font-weight:600; text-shadow:0 2px 12px rgba(0,0,0,.6);}
+  .hello small{display:block; font-size:19px; color:#d6d6dc; font-weight:400; margin-top:4px;}
+  .clock{position:absolute; right:0; top:0; font-size:40px; font-weight:300; color:#fff; text-align:right; text-shadow:0 2px 12px rgba(0,0,0,.6);}
+  .clock small{display:block; font-size:19px; color:#d6d6dc; margin-top:2px; font-weight:400;}
+  .art{
+    position:fixed; left:96px; bottom:372px; z-index:2; color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.7);
+  }
+  .art .k{ font-size:15px; letter-spacing:3px; text-transform:uppercase; color:#cfcfd6; }
+  .art .t{ font-size:44px; font-weight:700; margin-top:8px; }
+  .art .s{ font-size:21px; color:#e2e2e8; margin-top:6px; }
+  .dock{ position:fixed; left:0; right:0; bottom:120px; z-index:2; text-align:center; font-size:0; }
+  .tile{
+    display:inline-block; vertical-align:top; width:250px; height:150px; margin:0 18px;
+    position:relative; border-radius:18px; overflow:visible;
+    -webkit-transform:scale(1) translateY(0); transform:scale(1) translateY(0);
+    -webkit-transition:-webkit-transform .22s cubic-bezier(.2,.8,.2,1); transition:transform .22s cubic-bezier(.2,.8,.2,1);
+  }
+  .tile .card{
+    position:absolute; top:0; left:0; right:0; bottom:0; border-radius:18px; overflow:hidden;
+    background-repeat:no-repeat; background-position:center; background-size:auto 100%;
+    box-shadow:0 10px 24px rgba(0,0,0,.45);
+    -webkit-transition:box-shadow .22s ease; transition:box-shadow .22s ease;
+  }
+  .tile .shine{
+    position:absolute; top:0; left:0; right:0; bottom:0; border-radius:18px; opacity:0;
+    background:linear-gradient(135deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,0) 45%);
+    -webkit-transition:opacity .22s ease; transition:opacity .22s ease;
   }
   .tile .label{
-    position:absolute; left:0; right:0; bottom:24px; text-align:center;
-    font-size:23px; font-weight:600; color:#fff;
+    position:absolute; left:-40px; right:-40px; top:172px; text-align:center;
+    font-size:22px; font-weight:600; color:#fff; opacity:0; text-shadow:0 2px 10px rgba(0,0,0,.7);
+    -webkit-transition:opacity .22s ease; transition:opacity .22s ease;
   }
   .tile.focused{
-    -webkit-transform:scale(1.08); transform:scale(1.08);
-    box-shadow:0 16px 46px rgba(0,0,0,.6), 0 0 0 5px #ffffff; z-index:3;
+    -webkit-transform:scale(1.2) translateY(-14px); transform:scale(1.2) translateY(-14px); z-index:3;
   }
-  .hint{ position:fixed; bottom:26px; left:0; right:0; text-align:center; color:#8a8a93; font-size:17px; }
+  .tile.focused .card{ box-shadow:0 28px 50px rgba(0,0,0,.7); }
+  .tile.focused .shine, .tile.focused .label{ opacity:1; }
+  .hint{
+    position:fixed; top:150px; left:50%; z-index:4; width:900px; margin-left:-450px; text-align:center;
+    font-size:20px; color:#fff; opacity:0; -webkit-transition:opacity .3s ease; transition:opacity .3s ease;
+    text-shadow:0 2px 12px rgba(0,0,0,.8);
+  }
+  .hint.on{ opacity:1; }
 
   /* Descanso de tela */
   #saver{
@@ -84,12 +115,15 @@
 </style>
 </head>
 <body>
+  <div id="bg"></div>
+  <div id="veil"></div>
   <div class="top">
     <div class="hello" id="hello">Olá<small id="date"></small></div>
     <div class="clock"><span id="clock">--:--</span><small id="wx"></small></div>
   </div>
-  <div class="grid" id="grid"></div>
-  <div class="hint" id="hint">Setas para mover · OK para abrir</div>
+  <div class="art"><div class="k">Obra do dia</div><div class="t" id="artT"></div><div class="s" id="artS"></div></div>
+  <div class="dock" id="grid"></div>
+  <div class="hint" id="hint"></div>
 
   <div id="saver">
     <div class="img" id="imgA"></div>
@@ -111,14 +145,14 @@
 
   // app = código interno do app na TV (Tizen); store = código da loja (plano B)
   var APPS = [
-    { name:"YouTube",     app:"9Ur5IzDKqV.TizenYouTube",            store:"111299001912",  icon:"icons/youtube.png" },
-    { name:"Netflix",     app:"RN1MCdNq8t.Netflix",                 store:"11101200001",   icon:"icons/netflix.png" },
-    { name:"Prime Video", app:"evKhCgZelL.AmazonIgnitionLauncher2", store:"3201512006785", icon:"icons/prime.png" },
-    { name:"Disney+",     app:"MCmYXNxgcu.DisneyPlus",              store:"3201901017640", icon:"icons/disney.png" },
-    { name:"Globoplay",   app:"EUJSYi9GRg.globo",                   store:"3201510005787", icon:"icons/globoplay.png" },
-    { name:"Apple TV",    app:"Y6A54cEa22.AppleTV",                 store:"3202106024097", icon:"icons/appletv.png" }
+    { name:"YouTube",     app:"9Ur5IzDKqV.TizenYouTube",            store:"111299001912",  icon:"icons/youtube.png",   bg:"#ffffff" },
+    { name:"Netflix",     app:"RN1MCdNq8t.Netflix",                 store:"11101200001",   icon:"icons/netflix.png",   bg:"#f9f9fa" },
+    { name:"Prime Video", app:"evKhCgZelL.AmazonIgnitionLauncher2", store:"3201512006785", icon:"icons/prime.png",     bg:"#0578ff" },
+    { name:"Disney+",     app:"MCmYXNxgcu.DisneyPlus",              store:"3201901017640", icon:"icons/disney.png",    bg:"linear-gradient(160deg,#04293c 0%,#0a6f86 70%,#50cedc 100%)" },
+    { name:"Globoplay",   app:"EUJSYi9GRg.globo",                   store:"3201510005787", icon:"icons/globoplay.png", bg:"#f50234" },
+    { name:"Apple TV",    app:"Y6A54cEa22.AppleTV",                 store:"3202106024097", icon:"icons/appletv.png",   bg:"#000000" }
   ];
-  var COLS = 3;
+  var COLS = APPS.length;   // uma fileira só, como na Apple TV
   var grid = document.getElementById('grid');
   var tiles = [], cur = 0;
 
@@ -127,7 +161,9 @@
       var t = document.createElement('div');
       t.className = 'tile';
       t.innerHTML =
-        '<div class="logo" style="background-image:url('+a.icon+')"></div>' +
+        '<div class="card" style="background-image:url('+a.icon+'); background-color:'+(a.bg.charAt(0)==='#'?a.bg:'#04293c')+';'+
+          (a.bg.charAt(0)==='#'?'':' background-image:url('+a.icon+'), '+a.bg+';')+'"></div>' +
+        '<div class="shine"></div>' +
         '<div class="label">'+a.name+'</div>';
       t.onclick = function(){ focus(idx); launch(a); };
       grid.appendChild(t);
@@ -142,10 +178,11 @@
 
   var hint=document.getElementById('hint');
   var hintTimer=null;
+  // aviso discreto no topo, que some sozinho
   function say(t, keep){
-    hint.textContent=t;
+    hint.textContent=t; hint.className='hint on';
     if(hintTimer) clearTimeout(hintTimer);
-    if(!keep) hintTimer=setTimeout(function(){ hint.textContent='Setas para mover · OK para abrir'; }, 6000);
+    if(!keep) hintTimer=setTimeout(function(){ hint.className='hint'; }, 5000);
   }
 
   // Abre o app: 1) API Tizen com o código interno; 2) API local da TV com o código interno;
@@ -317,6 +354,18 @@
   });
   // ao voltar de um app para esta tela, reinicia a contagem
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) resetIdle(); });
+
+  // ---------- Obra do dia no fundo da tela (muda uma vez por dia) ----------
+  function setDaily(){
+    var d=nowBR(), start=new Date(d.getFullYear(),0,1);
+    var day=Math.floor((d-start)/86400000);
+    var a=ART[(day*7)%ART.length], u=url(a.f), im=new Image(), bg=document.getElementById('bg');
+    im.onload=function(){ bg.style.backgroundImage='url("'+u+'")'; bg.className='show'; };
+    im.src=u;
+    document.getElementById('artT').textContent=a.t;
+    document.getElementById('artS').textContent=a.s;
+  }
+  setDaily(); setInterval(setDaily, 60*60*1000);
 
   // ---------- Manutenção: remove o módulo TizenTube do TizenBrew (uma vez) ----------
   // Usa o serviço local do TizenBrew (ws://127.0.0.1:8081): GetModules = 4, ModuleAction = 10.
