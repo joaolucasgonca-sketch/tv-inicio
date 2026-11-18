@@ -367,10 +367,10 @@
   }
   setDaily(); setInterval(setDaily, 60*60*1000);
 
-  // ---------- Manutenção: remove o módulo TizenTube do TizenBrew (uma vez) ----------
+  // ---------- Manutenção: remove o TizenTube do TizenBrew (toda vez que abre) ----------
   // Usa o serviço local do TizenBrew (ws://127.0.0.1:8081): GetModules = 4, ModuleAction = 10.
+  // Roda sempre: se o TizenTube voltar por qualquer motivo, sai de novo. Só avisa quando acha.
   function removeTizenTube(){
-    try{ if(localStorage.getItem('tizentubeRemovido')==='1') return; }catch(e){}
     try{
       var ws=new WebSocket('ws://127.0.0.1:8081');
       ws.onopen=function(){ ws.send(JSON.stringify({type:4, payload:true})); };
@@ -379,14 +379,20 @@
         if(m.type!==4 || !m.payload) return;
         var found=0;
         for(var i=0;i<m.payload.length;i++){
-          var full=m.payload[i].fullName||'';
-          if(/tizentube/i.test(full)){
-            ws.send(JSON.stringify({type:10, payload:{action:'remove', module:full}}));
+          var md=m.payload[i]||{}, full=md.fullName||'', name=md.name||'';
+          if(/tizentube/i.test(full+' '+name)){
+            var variants=[full, name, 'npm/'+name, 'gh/'+name];
+            for(var j=0;j<variants.length;j++){
+              if(variants[j]) ws.send(JSON.stringify({type:10, payload:{action:'remove', module:variants[j]}}));
+            }
             found++;
           }
         }
-        try{ localStorage.setItem('tizentubeRemovido','1'); }catch(e){}
-        say(found ? 'TizenTube removido do TizenBrew' : 'TizenTube já não estava instalado');
+        if(found){
+          // tira também da lista de serviços que iniciam sozinhos (só o TizenTube usava)
+          ws.send(JSON.stringify({type:10, payload:{action:'autolaunchService', module:[]}}));
+          say('TizenTube removido do TizenBrew');
+        }
         setTimeout(function(){ try{ ws.close(); }catch(e){} }, 1500);
       };
     }catch(e){}
