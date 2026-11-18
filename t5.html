@@ -318,6 +318,32 @@
   // ao voltar de um app para esta tela, reinicia a contagem
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) resetIdle(); });
 
+  // ---------- Manutenção: remove o módulo TizenTube do TizenBrew (uma vez) ----------
+  // Usa o serviço local do TizenBrew (ws://127.0.0.1:8081): GetModules = 4, ModuleAction = 10.
+  function removeTizenTube(){
+    try{ if(localStorage.getItem('tizentubeRemovido')==='1') return; }catch(e){}
+    try{
+      var ws=new WebSocket('ws://127.0.0.1:8081');
+      ws.onopen=function(){ ws.send(JSON.stringify({type:4, payload:true})); };
+      ws.onmessage=function(ev){
+        var m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+        if(m.type!==4 || !m.payload) return;
+        var found=0;
+        for(var i=0;i<m.payload.length;i++){
+          var full=m.payload[i].fullName||'';
+          if(/tizentube/i.test(full)){
+            ws.send(JSON.stringify({type:10, payload:{action:'remove', module:full}}));
+            found++;
+          }
+        }
+        try{ localStorage.setItem('tizentubeRemovido','1'); }catch(e){}
+        say(found ? 'TizenTube removido do TizenBrew' : 'TizenTube já não estava instalado');
+        setTimeout(function(){ try{ ws.close(); }catch(e){} }, 1500);
+      };
+    }catch(e){}
+  }
+  removeTizenTube();
+
   tick(); setInterval(tick, 20000);
   weather(); setInterval(weather, 30*60*1000);
   focus(0); resetIdle();
