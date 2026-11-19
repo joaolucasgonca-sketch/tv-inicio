@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=1920, initial-scale=1">
 <title>Início</title>
 <script src="$WEBAPIS/webapis/webapis.js"></script>
+<script src="colecao.js"></script>
 <style>
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%; width:100%;}
@@ -299,19 +300,79 @@
   var sv=document.getElementById('saver'), imgA=document.getElementById('imgA'), imgB=document.getElementById('imgB'), cap=document.getElementById('cap');
   var slot=imgA, other=imgB, order=[], pos=0, sTimer=null, idleTimer=null, saving=false, loading=false;
 
-  function url(f){ return WM+encodeURIComponent(f.replace(/ /g,'_'))+'?width=1920'; }
-  function shuffle(){
-    order=[]; for(var i=0;i<ART.length;i++) order.push(i);
-    for(var j=order.length-1;j>0;j--){ var k=Math.floor(Math.random()*(j+1)); var t=order[j]; order[j]=order[k]; order[k]=t; }
-    pos=0;
+  function url(a){ return a.u ? a.u : WM+encodeURIComponent(a.f.replace(/ /g,'_'))+'?width=1920'; }
+  // ---------- Temas do descanso: alterna arte, lugares, cidades, carros e espaço ----------
+  // ART (lista acima): 0-19 arte, 20-29 lugares, 30+ espaço. COLECAO vem de colecao.js.
+  var POOLS={Arte:[],Lugares:[],Cidades:[],Carros:[],Espaco:[]}, PPOS={};
+  var MAPA={'Arte':'Arte','Paisagem':'Lugares','Montanhas':'Lugares','Pôr do sol':'Lugares','Cidades':'Cidades','Arquitetura':'Cidades','Carros':'Carros','Espaço':'Espaco'};
+  for(var ai=0;ai<ART.length;ai++) POOLS[ai<20?'Arte':(ai<30?'Lugares':'Espaco')].push(ART[ai]);
+  var EXTRA=window.COLECAO||[];
+  for(var ei=0;ei<EXTRA.length;ei++){ var th=MAPA[EXTRA[ei].c]; if(th) POOLS[th].push(EXTRA[ei]); }
+  var THEMES=['Arte','Lugares','Cidades','Lugares','Carros','Arte','Lugares','Espaco'], themePos=Math.floor(Math.random()*8);
+  function shufflePool(th){
+    var p=POOLS[th]; for(var j=p.length-1;j>0;j--){ var k=Math.floor(Math.random()*(j+1)); var t=p[j]; p[j]=p[k]; p[k]=t; }
+    PPOS[th]=0;
   }
-  function nextIndex(){ if(pos>=order.length) shuffle(); return order[pos++]; }
+  function fromPool(th){
+    if(!POOLS[th]||!POOLS[th].length) th='Lugares';
+    if(PPOS[th]===undefined||PPOS[th]>=POOLS[th].length) shufflePool(th);
+    var a=POOLS[th][PPOS[th]++]; return {src:url(a), t:a.t, s:a.s};
+  }
+
+  // ---------- Fotos do casal: ficam guardadas só na TV (nunca vão para a internet) ----------
+  // Chegam do Mac pela rede de casa (script "enviar-para-tv") e aparecem 1 a cada 10 imagens.
+  var FOTOS_MAC='http://192.168.0.4:8765/', CASAL=[], casalPos=0, slideCount=0, CASAL_CADA=10;
+  function idb(cb){
+    try{ var r=indexedDB.open('tvinicio',1);
+      r.onupgradeneeded=function(){ try{ r.result.createObjectStore('fotos'); }catch(e){} };
+      r.onsuccess=function(){ cb(r.result); }; r.onerror=function(){ cb(null); };
+    }catch(e){ cb(null); }
+  }
+  function loadCasal(){
+    idb(function(db){ if(!db) return;
+      try{ var rq=db.transaction('fotos','readonly').objectStore('fotos').get('casal');
+        rq.onsuccess=function(){ if(rq.result && rq.result.length) CASAL=rq.result; }; }catch(e){}
+    });
+  }
+  function saveCasal(list){
+    idb(function(db){ if(!db) return; try{ db.transaction('fotos','readwrite').objectStore('fotos').put(list,'casal'); }catch(e){} });
+  }
+  function syncCasal(){
+    try{
+      var x=new XMLHttpRequest(); x.open('GET',FOTOS_MAC+'lista.json?'+Date.now(),true); x.timeout=4000;
+      x.onload=function(){
+        if(x.status!==200) return;
+        var list; try{ list=JSON.parse(x.responseText); }catch(e){ return; }
+        if(!list.length){ CASAL=[]; saveCasal([]); say('Fotos do casal removidas da TV'); return; }
+        var got=[], left=list.length;
+        function done(){ if(--left>0) return; if(!got.length) return; CASAL=got; saveCasal(got); say('Fotos do casal guardadas na TV ('+got.length+')'); }
+        for(var i=0;i<list.length;i++) (function(it){
+          var y=new XMLHttpRequest(); y.open('GET',FOTOS_MAC+encodeURIComponent(it.f),true); y.responseType='blob';
+          y.onload=function(){
+            if(y.status!==200){ done(); return; }
+            var fr=new FileReader();
+            fr.onload=function(){ got.push({d:fr.result, t:it.t||'Giovana & João', s:it.s||'Nosso casamento'}); done(); };
+            fr.onerror=done; fr.readAsDataURL(y.response);
+          };
+          y.onerror=done; y.send();
+        })(list[i]);
+      };
+      x.onerror=function(){}; x.ontimeout=function(){}; x.send();
+    }catch(e){}
+  }
+  loadCasal(); syncCasal();
+
+  function pick(){
+    slideCount++;
+    if(CASAL.length && slideCount%CASAL_CADA===0){ var c=CASAL[casalPos++%CASAL.length]; return {src:c.d, t:c.t, s:c.s}; }
+    return fromPool(THEMES[themePos++%THEMES.length]);
+  }
 
   // Carrega a próxima imagem antes de mostrar; se falhar, pula para outra.
   function showNext(tries){
     if(!saving || loading) return;
     tries=tries||0; if(tries>5) return;
-    var a=ART[nextIndex()], u=url(a.f), im=new Image();
+    var a=pick(), u=a.src, im=new Image();
     loading=true;
     im.onload=function(){
       loading=false; if(!saving) return;
@@ -340,7 +401,6 @@
 
   function startSaver(){
     if(saving) return; saving=true; blockSamsungSaver();
-    if(!order.length) shuffle();
     tick(); weather();
     showNext(0);
     sTimer=setInterval(function(){ showNext(0); }, SLIDE_MS);
@@ -374,7 +434,7 @@
   function setDaily(){
     var d=nowBR(), start=new Date(d.getFullYear(),0,1);
     var day=Math.floor((d-start)/86400000);
-    var a=ART[(day*7)%ART.length], u=url(a.f), im=new Image(), bg=document.getElementById('bg');
+    var a=ART[(day*7)%ART.length], u=url(a), im=new Image(), bg=document.getElementById('bg');
     im.onload=function(){ bg.style.backgroundImage='url("'+u+'")'; bg.className='show'; };
     im.src=u;
     document.getElementById('artT').textContent=a.t;
