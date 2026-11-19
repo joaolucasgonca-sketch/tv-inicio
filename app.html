@@ -320,8 +320,8 @@
   }
 
   // ---------- Fotos do casal: ficam guardadas só na TV (nunca vão para a internet) ----------
-  // Chegam do Mac pela rede de casa (script "enviar-para-tv") e aparecem 1 a cada 10 imagens.
-  var FOTOS_MAC='http://192.168.0.4:8765/', CASAL=[], casalPos=0, slideCount=0, CASAL_CADA=10;
+  // Chegam do Mac pela rede de casa (script "enviar-para-tv").
+  var FOTOS_MAC='http://192.168.0.4:8765/', CASAL=[], casalPos=0;
   function idb(cb){
     try{ var r=indexedDB.open('tvinicio',1);
       r.onupgradeneeded=function(){ try{ r.result.createObjectStore('fotos'); }catch(e){} };
@@ -362,10 +362,30 @@
   }
   loadCasal(); syncCasal();
 
+  // Fotos do casal "por sorte": cada uma aparece no máximo 1 vez por dia, num momento sorteado
+  // (chance de 1 em 40 a cada troca, e pelo menos 20 min entre uma foto do casal e outra).
+  var CASAL_CHANCE=1/40, CASAL_GAP=20*60*1000, lastCasal=0;
+  function hoje(){ var d=nowBR(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+  function vistosHoje(){
+    try{ var v=JSON.parse(localStorage.getItem('casalVisto')||'{}'); if(v.d===hoje()) return v.ids||[]; }catch(e){}
+    return [];
+  }
+  function marcarVisto(i){
+    var ids=vistosHoje(); ids.push(i);
+    try{ localStorage.setItem('casalVisto', JSON.stringify({d:hoje(), ids:ids})); }catch(e){}
+  }
+  function sorteiaCasal(){
+    if(!CASAL.length || Date.now()-lastCasal<CASAL_GAP || Math.random()>=CASAL_CHANCE) return null;
+    var vistos=vistosHoje(), livres=[];
+    for(var i=0;i<CASAL.length;i++) if(vistos.indexOf(i)<0) livres.push(i);
+    if(!livres.length) return null;
+    var k=livres[Math.floor(Math.random()*livres.length)];
+    marcarVisto(k); lastCasal=Date.now();
+    return {src:CASAL[k].d, t:CASAL[k].t, s:CASAL[k].s};
+  }
   function pick(){
-    slideCount++;
-    if(CASAL.length && slideCount%CASAL_CADA===0){ var c=CASAL[casalPos++%CASAL.length]; return {src:c.d, t:c.t, s:c.s}; }
-    return fromPool(THEMES[themePos++%THEMES.length]);
+    if(/casal/.test(location.search) && CASAL.length){ var c=CASAL[casalPos++%CASAL.length]; return {src:c.d,t:c.t,s:c.s}; } // teste
+    return sorteiaCasal() || fromPool(THEMES[themePos++%THEMES.length]);
   }
 
   // Carrega a próxima imagem antes de mostrar; se falhar, pula para outra.
