@@ -361,6 +361,30 @@
     }catch(e){}
   }
   loadCasal(); syncCasal();
+  // Se ainda não tem as fotos, tenta de novo a cada 10 min e sempre que a tela volta (o Mac pode estar esperando)
+  setInterval(function(){ if(!CASAL.length) syncCasal(); }, 10*60*1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden && !CASAL.length) syncCasal(); });
+
+  // ---------- Atualiza sozinha: se houver versão nova no GitHub, recarrega ----------
+  var REPO='joaolucasgonca-sketch/tv-inicio';
+  function myRef(){ var m=decodeURIComponent(location.pathname).match(/@([0-9a-z]+)\//i); return m?m[1]:''; }
+  function checkUpdate(){
+    try{
+      var x=new XMLHttpRequest(); x.open('GET','https://api.github.com/repos/'+REPO+'/commits/main?'+Date.now(),true); x.timeout=8000;
+      x.onload=function(){
+        if(x.status!==200) return;
+        var sha; try{ sha=JSON.parse(x.responseText).sha.substr(0,7); }catch(e){ return; }
+        var ref=myRef();
+        if(!ref || ref===sha) return;
+        if(ref!=='main' && sha.indexOf(ref)===0) return;
+        location.replace('http://127.0.0.1:8081/module/'+encodeURIComponent('gh/'+REPO+'@'+sha)+'/app.html'+location.search);
+      };
+      x.send();
+    }catch(e){}
+  }
+  setTimeout(checkUpdate, 60*1000);
+  setInterval(checkUpdate, 30*60*1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) setTimeout(checkUpdate, 5000); });
 
   // Fotos do casal "por sorte": cada uma aparece no máximo 1 vez por dia, num momento sorteado
   // (chance de 1 em 40 a cada troca, e pelo menos 20 min entre uma foto do casal e outra).
