@@ -220,7 +220,42 @@
 
   // ---------- Relógio, data e clima (horário de Brasília) ----------
   function pad(n){ return (n<10?'0':'')+n; }
-  function nowBR(){ var n=new Date(); return new Date(n.getTime()+n.getTimezoneOffset()*60000-3*3600000); }
+  // O relógio da TV pode estar errado (fuso, horário de verão antigo, hora perdida).
+  // Por isso a hora certa de Brasília vem da internet, e o relógio da TV só conta os segundos.
+  var BR_DELTA=null;
+  function nowBR(){
+    if(BR_DELTA!==null) return new Date(Date.now()+BR_DELTA);
+    var n=new Date(); return new Date(n.getTime()+n.getTimezoneOffset()*60000-3*3600000);
+  }
+  function setBR(y,mo,d,h,mi,s,ms,t0){
+    var alvo=new Date(y,mo,d,h,mi,s,ms||0);
+    BR_DELTA=alvo.getTime()-Date.now()+Math.round((Date.now()-t0)/2);
+    try{ tick(); }catch(e){}
+  }
+  function syncHora(){
+    var t0=Date.now();
+    try{
+      var x=new XMLHttpRequest(); x.open('GET','https://timeapi.io/api/time/current/zone?timeZone=America%2FSao_Paulo&'+t0,true); x.timeout=8000;
+      x.onload=function(){
+        try{ var r=JSON.parse(x.responseText); if(x.status===200 && r.year){ setBR(r.year,r.month-1,r.day,r.hour,r.minute,r.seconds,r.milliSeconds,t0); return; } }catch(e){}
+        syncHora2();
+      };
+      x.onerror=x.ontimeout=syncHora2;
+      x.send();
+    }catch(e){ syncHora2(); }
+  }
+  function syncHora2(){  // plano B: cabeçalho Date do jsDelivr (UTC) menos 3 h
+    var t0=Date.now();
+    try{
+      var x=new XMLHttpRequest(); x.open('HEAD','https://data.jsdelivr.com/v1/stats/network?'+t0,true); x.timeout=8000;
+      x.onload=function(){
+        var u=Date.parse(x.getResponseHeader('Date')||''); if(!u) return;
+        var b=new Date(u-3*3600000);
+        setBR(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate(),b.getUTCHours(),b.getUTCMinutes(),b.getUTCSeconds(),0,t0);
+      };
+      x.send();
+    }catch(e){}
+  }
   var DIAS=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
   var MES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   function greet(h){ return h<5?'Boa noite':h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'; }
@@ -519,6 +554,8 @@
   removeTizenTube();
 
   tick(); setInterval(tick, 20000);
+  syncHora(); setInterval(syncHora, 60*60*1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) syncHora(); });
   weather(); setInterval(weather, 30*60*1000);
   focus(0); resetIdle();
 })();
